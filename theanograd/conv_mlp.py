@@ -10,7 +10,7 @@ from autograd import grad
 import theano
 import theano.tensor as T
 from theano.tensor.signal import downsample
-from util import floatX, to_gpu, WeightsParser, make_batches
+from util import floatX, to_gpu, WeightsParser, make_batches, load_mnist
 
 
 #############################
@@ -165,22 +165,14 @@ def make_conv_mlp(input_shape, layers):
 
 if __name__ == '__main__':
 
+    # load in mnist data
     if 'train_images' not in locals():
-        # Load and process MNIST data (borrowing from Kayak)
-        print("Loading training data...")
-        import imp, urllib
-        add_color_channel = lambda x : x.reshape((x.shape[0], 1, x.shape[1], x.shape[2]))
-        one_hot = lambda x, K : np.array(x[:,None] == np.arange(K)[None, :], dtype=int)
-        source, _ = urllib.urlretrieve(
-            'https://raw.githubusercontent.com/HIPS/Kayak/master/examples/data.py')
-        data = imp.load_source('data', source).mnist()
-        train_images, train_labels, test_images, test_labels = data
+        train_images, train_labels, test_images, test_labels = load_mnist() #data
         train_images = add_color_channel(train_images) / 255.0
         test_images  = add_color_channel(test_images)  / 255.0
         train_labels = one_hot(train_labels, 10)
         test_labels  = one_hot(test_labels, 10)
         N_data       = train_images.shape[0]
-
 
     ####################################################
     # define a convolutional multi-layer perceptron    #
