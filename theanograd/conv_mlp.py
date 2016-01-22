@@ -46,7 +46,7 @@ class softmax_layer(full_layer):
 
 class conv_layer(object):
 
-    def __init__(self, filter_shape, num_filters, pool_shape=(2, 2)):
+    def __init__(self, filter_shape, num_filters, pool_shape=(2, 2), nonlinearity=T.nnet.sigmoid):
         """ initialize layer with filter shape (eg 5x5), 
         number of filters (= number of output maps for this layer)
         number of input_maps (eg how many color/feature channels the input has)
@@ -55,6 +55,7 @@ class conv_layer(object):
         self.filter_shape = filter_shape
         self.num_filters  = num_filters
         self.pool_shape   = pool_shape
+        self.nonlinearity = nonlinearity
 
     def build_weights_dict(self, input_shape):
         # compute weights and bias shape, given input shape
@@ -64,11 +65,13 @@ class conv_layer(object):
         self.num_filter_weights = np.prod(self.w_shp)
         self.num_params         = self.num_filter_weights + self.b_shp[0]
 
-        # compute output shape
-        output_shape = (self.num_filters, ) + \
-                       self.conv_output_shape(input_shape[1:], self.filter_shape)
-        self.output_shape = output_shape
-        return self.num_params, output_shape
+        # compute output shape - it will return a tensor with 
+        #   (num_filters, conv_output_shape / max_pool size)
+        conv_output = self.conv_output_shape(input_shape[1:], self.filter_shape)
+        maxpool_output = (conv_output[0]/self.pool_shape[0],
+                          conv_output[1]/self.pool_shape[1])
+        self.output_shape = (self.num_filters, ) + maxpool_output
+        return self.num_params, self.output_shape
 
     def forward_pass(self, inputs, params):
         # Input dimensions:  [data, color_in, y, x]
@@ -83,8 +86,8 @@ class conv_layer(object):
         # pool conv out
         pool_out = downsample.max_pool_2d(conv_out, self.pool_shape, ignore_border=True)
 
-        # push output through a nonlinearty and return
-        output   = T.nnet.sigmoid(conv_out + b.dimshuffle('x', 0, 'x', 'x'))
+        # push output through a nonlinearity and return
+        output   = self.nonlinearity(pool_out + b.dimshuffle('x', 0, 'x', 'x'))
         return output
 
     def conv_output_shape(self, A, B):
@@ -168,11 +171,7 @@ if __name__ == '__main__':
     # load in mnist data
     if 'train_images' not in locals():
         train_images, train_labels, test_images, test_labels = load_mnist() #data
-        train_images = add_color_channel(train_images) / 255.0
-        test_images  = add_color_channel(test_images)  / 255.0
-        train_labels = one_hot(train_labels, 10)
-        test_labels  = one_hot(test_labels, 10)
-        N_data       = train_images.shape[0]
+        N_data = train_images.shape[0]
 
     ####################################################
     # define a convolutional multi-layer perceptron    #
@@ -180,8 +179,8 @@ if __name__ == '__main__':
     L2_reg = 1.0
     input_shape = (1, 28, 28)
     layer_specs = [
-        conv_layer(filter_shape = (5, 5), num_filters=6, pool_shape=(2,2)),
-        conv_layer(filter_shape = (5, 5), num_filters=16, pool_shape=(2,2))
+        conv_layer(filter_shape = (5, 5), num_filters=6, pool_shape=(2,2), nonlinearity = T.nnet.relu),
+        conv_layer(filter_shape = (5, 5), num_filters=16, pool_shape=(2,2),nonlinearity = T.nnet.relu)
     ]
 
     # Make neural net functions, define prediction function
@@ -255,6 +254,6 @@ if __name__ == '__main__':
                      test_perf = test_perf))
 
     # run sgd with momentum
-    W = adam(grad(opt_loss), W, callback=print_perf, num_iters=1000, step_size=.001)
+    W = adam(grad(opt_loss), W, callback=print_perf, num_iters=20000, step_size=.001)
 
 

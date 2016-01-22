@@ -43,4 +43,10 @@ def load_mnist():
     source, _ = urllib.urlretrieve(
         'https://raw.githubusercontent.com/HIPS/Kayak/master/examples/data.py')
     data = imp.load_source('data', source).mnist()
-    return data
+    train_images, train_labels, test_images, test_labels = data
+    train_images = add_color_channel(train_images) / 255.0
+    test_images  = add_color_channel(test_images)  / 255.0
+    train_labels = one_hot(train_labels, 10)
+    test_labels = one_hot(test_labels, 10)
+    N_data = train_images.shape[0]
+    return train_images, train_labels, test_images, test_labels
