@@ -65,9 +65,14 @@ class conv_layer(object):
         self.num_filter_weights = np.prod(self.w_shp)
         self.num_params         = self.num_filter_weights + self.b_shp[0]
 
-        # compute output shape - it will return a tensor with 
+        # compute output shape resulting from convolutoin and maxpool operation
         #   (num_filters, conv_output_shape / max_pool size)
         conv_output = self.conv_output_shape(input_shape[1:], self.filter_shape)
+        for i in [0, 1]:
+            assert conv_output[i] % self.pool_shape[i] == 0, \
+                "maxpool shape should tile convolution output exactly \n" + \
+                "convout = %s    \n" % str(conv_output) + \
+                "pool_shape = %s \n" % str(self.pool_shape)
         maxpool_output = (conv_output[0]/self.pool_shape[0],
                           conv_output[1]/self.pool_shape[1])
         self.output_shape = (self.num_filters, ) + maxpool_output
@@ -180,7 +185,7 @@ if __name__ == '__main__':
     input_shape = (1, 28, 28)
     layer_specs = [
         conv_layer(filter_shape = (5, 5), num_filters=6, pool_shape=(2,2), nonlinearity = T.nnet.relu),
-        conv_layer(filter_shape = (5, 5), num_filters=16, pool_shape=(2,2),nonlinearity = T.nnet.relu)
+        conv_layer(filter_shape = (3, 3), num_filters=16, pool_shape=(2,2),nonlinearity = T.nnet.relu)
     ]
 
     # Make neural net functions, define prediction function
@@ -245,7 +250,7 @@ if __name__ == '__main__':
     def print_perf(th, i, g):
         if i % 10 == 0:
           train_loss = loss(th, train_images[:1000], train_labels[:1000])
-          test_perf  = frac_err(th, test_images[:800, :, :, :], test_labels[:800, :])
+          test_perf  = frac_err(th, test_images[:5000, :, :, :], test_labels[:5000, :])
           train_perf = frac_err(th, train_images[:1000, :, :, :], train_labels[:1000, :])
           print("{epoch:15} | {train_loss:15} | {train_perf:15} | {test_perf:15} " . \
               format(epoch=i,
@@ -254,6 +259,6 @@ if __name__ == '__main__':
                      test_perf = test_perf))
 
     # run sgd with momentum
-    W = adam(grad(opt_loss), W, callback=print_perf, num_iters=20000, step_size=.001)
+    W = adam(grad(opt_loss), W, callback=print_perf, num_iters=20000, step_size=.0005)
 
 
