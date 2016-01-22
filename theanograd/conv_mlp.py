@@ -102,7 +102,7 @@ class conv_layer(object):
 # Make autograd differentiable convolutional MLP function     #
 ###############################################################
 
-def make_conv_mlp(input_shape, layers):
+def make_conv_mlp(input_shape, layer_specs):
     """ Make a convolutional multilayer perceptron function where we get 
     gradients from optimized theano code.  This returns a function handle
 
