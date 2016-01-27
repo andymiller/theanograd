@@ -30,7 +30,7 @@ def make_batches(N_total, batch_size):
     start = 0
     batches = []
     while start < N_total:
-        batches.append(slice(start, start + batch_size))
+        batches.append(slice(start, min(N_total, start + batch_size)))
         start += batch_size
     return batches
 
